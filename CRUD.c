@@ -6,16 +6,39 @@
 
 typedef struct
 {
-    int id;
-    char name[50];
-    int age;
+    int UserId;
+    char UserName[50];
+    int UserAge;
 } User;
 
 void createUser();
 void readUsers();
 void updateUser();
 void deleteUser();
-int userExists(int id);
+int userExists(int UserId);
+int validName(const char *UserName);
+int validAge(int UserAge);
+
+
+int validName(const char *UserName)
+{
+    for (int i = 0; UserName[i] != '\0'; i++)
+    {
+        if (!((UserName[i] >= 'A' && UserName[i] <= 'Z') ||
+              (UserName[i] >= 'a' && UserName[i] <= 'z') ||
+              UserName[i] == ' ')) // allow spaces
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int validAge(int UserAge)
+{
+    return UserAge > 0;
+}
+
 
 int main()
 {
@@ -54,17 +77,16 @@ int main()
     return 0;
 }
 
-// Function to check if user already exists
-int userExists(int id)
+int userExists(int UserId)
 {
     FILE *fp = fopen(FILENAME, "r");
     if (!fp)
         return 0;
 
     User u;
-    while (fscanf(fp, "%d %s %d", &u.id, u.name, &u.age) != EOF)
+    while (fscanf(fp, "%d %49s %d", &u.UserId, u.UserName, &u.UserAge) != EOF)
     {
-        if (u.id == id)
+        if (u.UserId == UserId)
         {
             fclose(fp);
             return 1;
@@ -74,30 +96,42 @@ int userExists(int id)
     return 0;
 }
 
+
 void createUser()
 {
     User u;
-    printf("Enter ID: ");
-    scanf("%d", &u.id);
+    printf("Enter User ID: ");
+    scanf("%d", &u.UserId);
 
-    if (userExists(u.id))
+    if (userExists(u.UserId))
     {
-        printf("User with ID %d already exists!\n", u.id);
+        printf("User with ID %d already exists!\n", u.UserId);
         return;
     }
 
-    printf("Enter Name: ");
-    scanf("%s", u.name);
-    printf("Enter Age: ");
-    scanf("%d", &u.age);
+    do
+    {
+        printf("Enter Name (alphabets only): ");
+        scanf("%49s", u.UserName);
+        if (!validName(u.UserName))
+            printf("Invalid name! Please use letters only.\n");
+    } while (!validName(u.UserName));
 
-    FILE *fp = fopen(FILENAME, "a"); // Append mode
+    do
+    {
+        printf("Enter Age (> 0): ");
+        scanf("%d", &u.UserAge);
+        if (!validAge(u.UserAge))
+            printf("Invalid age! Must be greater than 0.\n");
+    } while (!validAge(u.UserAge));
+
+    FILE *fp = fopen(FILENAME, "a"); 
     if (!fp)
     {
         printf("Error opening file!\n");
         return;
     }
-    fprintf(fp, "%d %s %d\n", u.id, u.name, u.age);
+    fprintf(fp, "%d %s %d\n", u.UserId, u.UserName, u.UserAge);
     fclose(fp);
     printf("User added successfully!\n");
 }
@@ -113,39 +147,55 @@ void readUsers()
 
     User u;
     printf("\n--- User Records ---\n");
-    while (fscanf(fp, "%d %s %d", &u.id, u.name, &u.age) != EOF)
+    while (fscanf(fp, "%d %49s %d", &u.UserId, u.UserName, &u.UserAge) != EOF)
     {
-        printf("ID: %d | Name: %s | Age: %d\n", u.id, u.name, u.age);
+        printf("ID: %d | Name: %s | Age: %d\n", u.UserId, u.UserName, u.UserAge);
     }
     fclose(fp);
 }
 
 void updateUser()
 {
-    int id, found = 0;
-    printf("Enter ID of user to update: ");
-    scanf("%d", &id);
+    int UserId, found = 0;
+    printf("Enter User ID to update: ");
+    scanf("%d", &UserId);
 
     FILE *fp = fopen(FILENAME, "r");
     FILE *temp = fopen("temp.txt", "w");
     if (!fp || !temp)
     {
         printf("Error opening file!\n");
+        if (fp)
+            fclose(fp);
+        if (temp)
+            fclose(temp);
         return;
     }
 
     User u;
-    while (fscanf(fp, "%d %s %d", &u.id, u.name, &u.age) != EOF)
+    while (fscanf(fp, "%d %49s %d", &u.UserId, u.UserName, &u.UserAge) != EOF)
     {
-        if (u.id == id)
+        if (u.UserId == UserId)
         {
             found = 1;
-            printf("Enter new Name: ");
-            scanf("%s", u.name);
-            printf("Enter new Age: ");
-            scanf("%d", &u.age);
+
+            do
+            {
+                printf("Enter new Name (alphabets only): ");
+                scanf("%49s", u.UserName);
+                if (!validName(u.UserName))
+                    printf("Invalid name! Please use letters only.\n");
+            } while (!validName(u.UserName));
+
+            do
+            {
+                printf("Enter new Age (> 0): ");
+                scanf("%d", &u.UserAge);
+                if (!validAge(u.UserAge))
+                    printf("Invalid age! Must be greater than 0.\n");
+            } while (!validAge(u.UserAge));
         }
-        fprintf(temp, "%d %s %d\n", u.id, u.name, u.age);
+        fprintf(temp, "%d %s %d\n", u.UserId, u.UserName, u.UserAge);
     }
     fclose(fp);
     fclose(temp);
@@ -156,33 +206,37 @@ void updateUser()
     if (found)
         printf("User updated successfully!\n");
     else
-        printf("User with ID %d not found!\n", id);
+        printf("User with ID %d not found!\n", UserId);
 }
 
 void deleteUser()
 {
-    int id, found = 0;
-    printf("Enter ID of user to delete: ");
-    scanf("%d", &id);
+    int UserId, found = 0;
+    printf("Enter User ID to delete: ");
+    scanf("%d", &UserId);
 
     FILE *fp = fopen(FILENAME, "r");
     FILE *temp = fopen("temp.txt", "w");
     if (!fp || !temp)
     {
         printf("Error opening file!\n");
+        if (fp)
+            fclose(fp);
+        if (temp)
+            fclose(temp);
         return;
     }
 
     User u;
-    while (fscanf(fp, "%d %s %d", &u.id, u.name, &u.age) != EOF)
+    while (fscanf(fp, "%d %49s %d", &u.UserId, u.UserName, &u.UserAge) != EOF)
     {
-        if (u.id == id)
+        if (u.UserId == UserId)
         {
             found = 1; // Skip writing this user
         }
         else
         {
-            fprintf(temp, "%d %s %d\n", u.id, u.name, u.age);
+            fprintf(temp, "%d %s %d\n", u.UserId, u.UserName, u.UserAge);
         }
     }
     fclose(fp);
@@ -194,5 +248,5 @@ void deleteUser()
     if (found)
         printf("User deleted successfully!\n");
     else
-        printf("User with ID %d not found!\n", id);
+        printf("User with ID %d not found!\n", UserId);
 }
