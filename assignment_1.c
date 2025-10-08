@@ -79,16 +79,16 @@ int evaluate(char exp[], int *err)
     }
 
     // now apply + and - in order
-    int ans = numbers[0];
+    int answer = numbers[0];
     int k = 1;
     for (int j = 0; j <= signTop; j++)
     {
         if (signs[j] == '+')
-            ans += numbers[k++];
+            answer += numbers[k++];
         else
-            ans -= numbers[k++];
+            answer -= numbers[k++];
     }
-    return ans;
+    return answer;
 }
 
 int main()
