@@ -3,7 +3,7 @@
 #include <time.h>
 
 //function prototypes
-void printOriginalMatrix(int *matrix, int n);
+void printMatrix(int *matrix, int n);
 void rotateMatrix90Clockwise(int *matrix, int n);
 void matrixSmoothingFilter(int *matrix, int n);
 
@@ -29,21 +29,26 @@ int main(){
     }
     printf("\nOriginal Randomly Generated Matrix:\n");
     
-    printOriginalMatrix((int *)matrix, n);// Print the original matrix
+    printMatrix((int *)matrix, n);// Print the original matrix
 
     printf("Matrix after 90 degree Clockwise Rotation:\n");
 
     rotateMatrix90Clockwise((int *)matrix, n); // Rotate the matrix 90 degrees clockwise
 
+    printMatrix((int *)matrix, n); // Print the rotated matrix
+    printf("\n");
+
     printf("Matrix after Applying 3x3 Smoothing Filter:\n");
 
     matrixSmoothingFilter((int *)matrix, n); // Apply 3x3 smoothing filter
+
+    printMatrix((int *)matrix, n); // Print the smoothed matrix 
 
     return 0;
 }
 
 // Function to print the original matrix
-void printOriginalMatrix(int *matrix, int n){
+void printMatrix(int *matrix, int n){
     for(int i = 0; i < n; i++){
         for(int j = 0; j < n; j++){
             printf("%4d ", *(matrix+i*n+j));
@@ -75,14 +80,7 @@ void rotateMatrix90Clockwise(int *matrix, int n){
         }
     }
 
-    // Print the rotated matrix
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < n; j++){
-            printf("%4d ", *(matrix + i*n + j));
-        }
-        printf("\n");
-    }
-    printf("\n");
+
 }
 
 // Function to apply a 3x3 smoothing filter
@@ -96,12 +94,12 @@ void matrixSmoothingFilter(int *matrix, int n){
             int count = 0;
 
             // Iterate through the 3x3 neighborhood
-            for(int p = -1; p <= 1; p++){
-                for(int q = -1; q <= 1; q++){
-                    int ni = i + p;
-                    int nj = j + q;
-                    if(ni >= 0 && ni < n && nj >= 0 && nj < n){
-                        sum += *(matrix + ni*n + nj);
+            for(int rowOffset = -1; rowOffset <= 1; rowOffset++){
+                for(int colOffset = -1; colOffset <= 1; colOffset++){
+                    int adjacentRow = i + rowOffset;
+                    int adjacentCol = j + colOffset;
+                    if(adjacentRow >= 0 && adjacentRow < n && adjacentCol >= 0 && adjacentCol < n){
+                        sum += *(matrix + adjacentRow*n + adjacentCol);
                         count++;
                     }
                 }
@@ -109,11 +107,5 @@ void matrixSmoothingFilter(int *matrix, int n){
             *(matrix + i*n + j) = sum / count;// Update with average value
         }
     } 
-    // Print the smoothed matrix
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < n; j++){
-            printf("%4d ", *(matrix + i*n + j));
-        }
-        printf("\n");
-    }
+
 }
