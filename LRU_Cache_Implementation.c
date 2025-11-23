@@ -1,238 +1,252 @@
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdlib.h>
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
 
+#define tableSize 1009 
 
-#define HASH_SIZE 1009   // any prime number greater than capacity(1000) to reduce collisions
-
-// node for doubly linked list
-typedef struct node {
+//node for doubly linked list
+typedef struct node{
     int key;
     char *value;
-    struct node *prev;
     struct node *next;
-} node;
+    struct node *prev;
+}node; 
 
-// Hash table entry (for separate chaining)
-typedef struct HashEntry {
+//hash table structure
+typedef struct hashTable{
     int key;
     node *node;
-    struct HashEntry *next;
-} HashEntry;
+    struct hashTable *next; 
 
-// LRU Cache structure
-typedef struct {
+}hashTable;
+
+//cache structure
+typedef struct lruCache{
     int capacity;
     int size;
-    node *head;   
-    node *tail;   
-    HashEntry **table;
-} LRUCache;
+    node *head;
+    node *tail;
+    hashTable **table;
+    
+}lruCache;
 
+//creating cache 
+lruCache *createCache(int capacity){
+    lruCache *cache = malloc(sizeof(lruCache));
+    if(!cache){
+        printf("memory allocation failed\n");
+        return NULL;
+    }       
+     
+    cache->capacity=capacity;
+    cache->size=0;
+    cache->head=NULL;
+    cache->tail=NULL;
 
-// simple hash function
-int hash(int key) {
-    if (key < 0) key =-key;//to avoid negative keys
-    return key % HASH_SIZE;
-}
-
-// find a key in hash table
-HashEntry* findKey(LRUCache *cache, int key) {
-    int h = hash(key);
-    HashEntry *curr = cache->table[h];
-
-    while (curr) {
-        if (curr->key == key)
-            return curr; //key found
-        curr = curr->next;
-    }
-    return NULL;
-}
-
-// insert into hash table
-void insertEntry(LRUCache *cache, int key, node *node) {
-    int h = hash(key);
-    HashEntry *newKey = malloc(sizeof(HashEntry));
-
-    newKey->key = key;
-    newKey->node = node;
-    newKey->next = cache -> table[h];   // insert at head of chain
-    cache->table[h] = newKey ;
-}
-
-// delete from hash table
-void deleteEntry(LRUCache *cache, int key) {
-    int h = hash(key);
-
-    HashEntry *curr = cache->table[h];
-    HashEntry *prev = NULL;
-
-    while (curr) {
-        if (curr->key == key) {
-            if (prev)
-                prev->next = curr->next;
-            else
-                cache->table[h] = curr->next;
-
-            free(curr);
-            return;
-        }
-        prev = curr;
-        curr = curr->next;
-    }
-}
-
-
-
-// create a new doubly linked list node
-node* createNode(int key, const char *value) {
-    node *n = malloc(sizeof(node));
-    n->key = key;
-
-    n->value = malloc(strlen(value)+1);
-    strcpy(n->value, value); //copying data
-
-    n->prev = n->next = NULL;
-    return n;
-}
-
-// add node to the front 
-void moveFront(LRUCache *cache, node *n) {
-    n->prev = NULL;
-    n->next = cache->head;
-
-    if (cache->head)
-        cache->head->prev = n;
-
-    cache->head = n;
-
-    if (cache->tail == NULL)
-        cache->tail = n;  // first element
-}
-
-// remove a node from anywhere in the list
-void removeNode(LRUCache *cache, node *n) {
-    if (n->prev)
-        n->prev->next = n->next;
-    else
-        cache->head = n->next;
-
-    if (n->next)
-        n->next->prev = n->prev;
-    else
-        cache->tail = n->prev;
-}
-
-// move an existing node to front 
-void moveToFront(LRUCache *cache, node *n) {
-    if (cache->head == n) return; // already MRU
-
-    removeNode(cache, n);
-    moveFront(cache, n);
-}
-
-// remove least recently used 
-node* removeLRU(LRUCache *cache) {
-    node *lru = cache->tail;
-    removeNode(cache, lru);
-    return lru;
-}
-
-
-// create LRU Cache
-LRUCache* createCache(int capacity) {
-    LRUCache *cache = malloc(sizeof(LRUCache));
-
-    cache->capacity = capacity;
-    cache->size = 0;
-    cache->head = NULL;
-    cache->tail = NULL;
-
-    cache->table = calloc(HASH_SIZE, sizeof(HashEntry*));//cretate hash table with all entries NULL
+    cache->table = calloc(tableSize,sizeof(hashTable*));
 
     return cache;
 }
 
-// get value for a key
-char* get(LRUCache *cache, int key) {
-    HashEntry *entry = findKey(cache, key);
-
-    if (!entry)
-        return NULL;
-
-    moveToFront(cache, entry->node);
-    return entry->node->value;
+int hash(int key){
+    if (key<0) key = -key;
+    return key%tableSize;
 }
 
-// put key/value
-void put(LRUCache *cache, int key, const char *value) {
+//creating node
+node* createNode(int key, char *value){
+    node *newnode = malloc(sizeof(node));
 
-    HashEntry *entry = findKey(cache, key);
+    newnode->key=key;
+    newnode->value=malloc(strlen(value)+1);
+    strcpy(newnode->value,value);
 
-    // key already exists  update
-    if (entry) {
+    newnode->next=NULL;
+    newnode->prev=NULL;
 
-        free(entry->node->value);
+    return newnode;
+}
 
-        entry->node->value = malloc(strlen(value)+1); 
-        strcpy(entry->node->value, value); 
+//add new node to front
+void addFront(lruCache *cache,node *newnode){
+    newnode->prev=NULL;
+    newnode->next=cache->head;
 
-        moveToFront(cache, entry->node);
+    if(cache->head) cache->head->prev=newnode;
+    
+    cache->head=newnode;
+    
+    //only for first element
+    if(cache->tail==NULL){
+        cache->tail=newnode;
+    }
+}
+
+
+//inserting into hashTable
+void insertValue(lruCache *cache, int key,node *newnode){
+    hashTable *newEntry = malloc(sizeof(hashTable));
+
+    int index = hash(key);
+
+    newEntry->key=key;
+    newEntry->node=newnode;
+    newEntry->next = cache->table[index];   
+    cache->table[index] = newEntry;
+
+}
+
+//retrieving key
+hashTable *getkey(lruCache* cache, int key){
+    int index = hash(key);
+    
+    hashTable * current = cache->table[index];
+    
+    while(current!= NULL){
+        if(current->key==key){
+            return current;
+        }
+        current = current->next;
+    }
+    return NULL;
+}
+
+//removing node
+void removeNode(lruCache *cache, node *leastUsed){
+    if(leastUsed->prev!=NULL){
+        leastUsed->prev->next=leastUsed->next;
+    }
+    else{
+        cache->head=leastUsed->next;
+    }
+
+    if (leastUsed->next!=NULL){
+        leastUsed->next->prev=leastUsed->prev;
+    }
+    else
+    {
+        cache->tail=leastUsed->prev;
+    }
+}
+
+//moving node front when accessed 
+void moveFront(lruCache *cache,node *current){
+    if (cache->head==current) return;
+
+    removeNode(cache,current);
+    addFront(cache,current);
+}
+
+//get Least Recently Used
+node *getLru(lruCache *cache){
+    node *leastUsed = cache->tail;
+    removeNode(cache, leastUsed);
+    return leastUsed;
+}
+
+//freeing the LRU
+void deleteKey(lruCache *cache, int key){
+    int index = hash(key);
+
+    hashTable *current = cache->table[index];
+    hashTable *prev = NULL;
+    
+    while(current!=NULL){
+        if(current->key==key){
+            if(prev!=NULL){
+                prev->next=current->next;
+            }
+            else {
+                cache->table[index]=current->next;
+            }
+            free(current);
+            return;
+        }
+        prev=current;
+        current=current->next;
+    }
+
+}
+
+//adding  value to hashmap
+void put (lruCache *cache,int key ,char *value){
+        
+    hashTable *bucket = getkey(cache, key);
+
+    if(bucket != NULL){
+        free(bucket->node->value);
+
+        bucket->node->value=malloc(strlen(value)+1);
+        strcpy(bucket->node->value,value);
+
+        moveFront(cache,bucket->node);
         return;
     }
 
-    // if cache full → remove LRU
-    if (cache->size == cache->capacity) {
-        node *tail = removeLRU(cache);
-        deleteEntry(cache, tail->key);
+
+    if(cache->capacity==cache->size){
+        node *tail= getLru(cache);
+        deleteKey(cache,tail->key);
         free(tail->value);
         free(tail);
+        
         cache->size--;
+
     }
 
-    // insert new node
-    node *n = createNode(key, value);
-    moveFront(cache, n);
-    insertEntry(cache, key, n);
+    node *newNode = createNode(key, value); 
+    addFront(cache,newNode);
+    insertValue(cache,key,newNode);
 
     cache->size++;
+    return;
 }
 
 
-// free the entire cache
-void freeCache(LRUCache *cache) {
-    node *curr = cache->head;
+//retrieving  value
+char* getValue(lruCache* cache,int key){
+    hashTable *bucket = getkey(cache,key);
+    
+    if(!bucket) return NULL;
 
-    while (curr) {
-        node *next = curr->next;
-        free(curr->value);
-        free(curr);
-        curr = next;
+    moveFront(cache,bucket->node);
+    return bucket->node->value;
+
+}
+
+//freeing memory on exit
+void freeCache(lruCache *cache){
+    node *current = cache->head;
+
+    while(current!=NULL){
+        node *next = current->next;
+        free(current->value);
+        free(current);
+        current =next;
     }
 
-    for (int i = 0; i < HASH_SIZE; i++) {
-        HashEntry *e = cache->table[i];
-        while (e) {
-            HashEntry *next = e->next;
-            free(e);
-            e = next;
+    for (int i=0; i<tableSize ; i++){
+        hashTable *bucket = cache->table[i];
+        while(bucket!=NULL){
+            hashTable *next = bucket->next;
+            free(bucket);
+            bucket = next;
         }
     }
     free(cache->table);
     free(cache);
 }
 
-//main function
+
 int main(){
-    LRUCache *cache = NULL; 
+    lruCache *cache = NULL; 
     char command[20];
 
     printf("commands: createCache <capacity>,\n put <key> <value>,\n get <key>,\n exit\n");
 
     while(1){
 
-        printf("Enter command: \n");
+        printf("\nEnter command: \n");
 
         scanf("%19s",command);
 
@@ -243,17 +257,21 @@ int main(){
 
             while(1){
                 if(scanf("%d", &capacity) != 1){
-                    printf("enter an integer \n");
-                    while(getchar() != '\n'); // clear invalid input
+                    printf("Enter an integer \n");
+                    while(getchar() != '\n'); 
                 } 
                 else if(capacity < 1 || capacity > 1000){
-                    printf("enter between 1 and 1000\n");
+                    printf("Enter between 1 and 1000\n");
                 }
                  else {
                     break;
                 }
             }
             cache = createCache(capacity);
+            if (!cache) {                       
+                printf("Cache not created yet!\n");
+                continue;
+            }
             printf("Cache created.\n");
         }
 
@@ -271,21 +289,21 @@ int main(){
                 if(scanf("%d", &key) == 1) break;
                 
                 else printf("Enter a valid integer.\n");
-                while (getchar() != '\n');
+                while (getchar() !='\n');
             }
 
             while(1){
-                if (scanf("%99s", value) == 1) break;
+                if (scanf("%99s", value)==1) break;
                 
                 else printf("Enetr a valid string.\n");
-                while (getchar() != '\n');
+                while (getchar()!='\n');
             }
 
             put(cache,key,value);
             printf("Key - Value Inserted.\n");
         }
 
-        else if (strcmp(command, "get") == 0) {
+        else if (strcmp(command, "get")== 0) {
             if (!cache) {
                 printf("cache not created yet!\n");
                 continue;
@@ -295,12 +313,12 @@ int main(){
             while(1){
                 if(scanf("%d", &key) != 1){
                     printf("enter an integer \n");
-                    while(getchar() != '\n');
+                    while(getchar()!='\n');
                 } 
                 else break;
             }
 
-            char *val = get(cache, key);
+            char *val = getValue(cache, key);
             if (val) printf("%s\n", val);
             else printf("NULL\n");
         }
@@ -312,7 +330,7 @@ int main(){
         else{
             printf("Invalid command! \nRe-enter valid command,\n");
 
-            while(getchar() != '\n');//clearing input buffer
+            while(getchar()!='\n');
         }
     }
 
